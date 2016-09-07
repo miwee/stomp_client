@@ -13,11 +13,13 @@ def deps do
 end
 ```
 
+Refer to folder lib/stomp_client/rabbitmq for broker specific addons.
+
+Refer to file lib/stomp_client/default_callback_handler.ex, for integrating the client within your code.
+
 Load the project in `iex -S mix` to explore the StompClient
 
 ```
-$ iex -S mix
-
 iex(1)> {:ok, pid} = StompClient.DefaultCallbackHandler.start_link(%{})
 {:ok, #PID<0.83.0>}
 
