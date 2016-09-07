@@ -9,8 +9,8 @@ defmodule StompClient.RabbitMQ.PersistedWorkQueue do
   def subscribe(pid, topic, prefetch_count: prefetch_count) do 
     topic2 = create_topic(topic)
     sub_id = :erlang.phash2(topic2, 65_535)
-    opts = %{id: sub_id, durable: true, "auto-delete": false, "prefetch-count": prefetch_count, 
-            ack: "client-individual"}
+    opts = [id: sub_id, durable: true, "auto-delete": false, "prefetch-count": prefetch_count, 
+            ack: "client-individual"]
     StompClient.subscribe(pid, topic2, opts)
   end 
 
