@@ -44,3 +44,7 @@ iex(5)> StompClient.send(c, "test_topic", "some sample test data")
 15:25:17.565 [info]  stomp_client message received: %{"body" => "some sample test data", "content-length" => "21", "destination" => "/queue/test_topic", "message-id" => "T_1@@session-2S-zfEuZZgh11CNikItXDw@@1", "redelivered" => "false", "subscription" => "1"}
 
 ```
+
+## Acknowledgment
+- http://www.hccp.org/erlang-stomp-client.html
+- https://github.com/jasonrbriggs/stomp.py
