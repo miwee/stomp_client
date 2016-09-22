@@ -27,7 +27,7 @@ defmodule StompClient do
   end
 
   def connect do
-    connect(%{})
+    connect([])
   end
   def connect(connect_opts) do
     connect(connect_opts, callback_handler: nil)
@@ -54,6 +54,7 @@ defmodule StompClient do
         {:error, :id_field_missing}
 
       sub_id ->
+        opts = Keyword.delete(opts, :id)
         GenServer.call(pid, {:subscribe, destination, sub_id, opts})
     end
   end
@@ -133,7 +134,7 @@ defmodule StompClient do
   end
 
   def handle_call(:disconnect, _from, %State{sock: sock} = state) do
-    disconnect_id = 77
+    disconnect_id = "77"
     message = "DISCONNECT\nreceipt:#{disconnect_id}\n\n\0"
     case :gen_tcp.send(sock, message) do
       :ok ->
@@ -296,33 +297,13 @@ defmodule StompClient do
 
     message2 = buf <> message
     # Logger.debug inspect(message2, binaries: :as_strings)
-    parsed = Parser.parse_message(message2) 
-    [{:type, type}, {:headers, headers}, {:body, body}, remain] = parsed
-    state = %State{state | recv_buffer: remain}
-    # Logger.debug inspect([{:type, type}, {:headers, headers}, {:body, body}], binaries: :as_strings)
-    case type do
-      "MESSAGE" ->
-        data = Map.merge(headers, %{"body" => body})
-        send_callback(state.callback_handler, {:on_message, data})
-        {:noreply, %State{state | logged_in: true}}
+    case loop_parse_message(message2, state) do 
+      :stop ->
+        :gen_tcp.close(sock)
+        {:stop, :normal, state}
 
-      "RECEIPT" ->
-        disconnect_id = "#{state.disconnect_id}"
-        receipt_id = headers["receipt-id"]
-        if receipt_id == disconnect_id do
-          send_callback(state.callback_handler, {:on_disconnect, true})
-          :gen_tcp.close(sock)
-          {:stop, :normal, state}
-        else
-          send_callback(state.callback_handler, {:on_receipt, receipt_id})
-          {:noreply, %State{state | logged_in: true}}
-        end
-
-      "ERROR" ->
-        data = Map.merge(headers, %{"body" => body})
-        send_callback(state.callback_handler, {:on_message_error, data})
-        Logger.error inspect(data, binaries: :as_strings)
-        {:noreply, state}
+      {:ok, remain} ->
+        {:noreply, %State{state | recv_buffer: remain}}    
     end
   end
 
@@ -358,6 +339,45 @@ defmodule StompClient do
   defp send_callback(callback_handler, data) do
     data2 = Tuple.insert_at(data, 0, :stomp_client) 
     Kernel.send callback_handler, data2
+  end
+
+  defp loop_parse_message("", _state) do
+    {:ok, ""}
+  end
+  defp loop_parse_message("\n", _state) do
+    {:ok, ""}
+  end
+  defp loop_parse_message(message, %State{callback_handler: callback_handler, disconnect_id: disconnect_id} = state) do
+    parsed = Parser.parse_message(message) 
+    [{:type, type}, {:headers, headers}, {:body, body}, remain] = parsed
+    # Logger.debug inspect([{:type, type}, {:headers, headers}, {:body, body}], binaries: :as_strings)
+
+    if remain == message do 
+      {:ok, remain}
+    else
+      case type do
+        "MESSAGE" ->
+          data = Map.merge(headers, %{"body" => body})
+          send_callback(callback_handler, {:on_message, data})
+          loop_parse_message(remain, state)
+
+        "RECEIPT" ->
+          receipt_id = headers["receipt-id"]
+          if receipt_id == disconnect_id do
+            send_callback(callback_handler, {:on_disconnect, true})
+            :stop
+          else
+            send_callback(callback_handler, {:on_receipt, receipt_id})
+            loop_parse_message(remain, state)
+          end
+
+        "ERROR" ->
+          data = Map.merge(headers, %{"body" => body})
+          send_callback(callback_handler, {:on_message_error, data})
+          Logger.error inspect(data, binaries: :as_strings)
+          loop_parse_message(remain, state)
+      end
+    end
   end
 end
 
