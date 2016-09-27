@@ -2,8 +2,16 @@ defmodule StompClient.Parser do
   require Logger
 
   def parse_message(message) do
-    [type, {headers, message_body}, remain] = get_type(message)
-    [{:type, type}, {:headers, headers}, {:body, message_body}, remain]
+    case get_type(message) do
+      :partial ->
+        :partial
+
+      {:error, remain} ->
+        {:error, remain}
+
+      {type, {headers, message_body}, remain} ->
+        {:ok, %{type: type, headers: headers, body: message_body, remain: remain}}
+    end
   end
 
   defp get_message_body(message) do
@@ -15,29 +23,34 @@ defmodule StompClient.Parser do
         {message_body, r}
 
       _ ->
-        {my_message_body, remain} = get_message_body(r, message_body)
-        {message_body <> <<x>> <> my_message_body, remain}
+        case get_message_body(r, message_body) do
+          :partial ->
+            :partial
+
+          {my_message_body, remain} ->
+            {message_body <> <<x>> <> my_message_body, remain}
+        end
     end
   end
   defp get_message_body("", "") do
-    {"", ""}
+    :partial
   end
 
   defp get_message_body_with_length(r, length_str) when is_binary(length_str) do
     case Integer.parse(length_str) do 
       {n, ""} -> get_message_body_with_length(r, n) 
-      _       -> {"", r}
+      _       -> {:error, r}
     end
   end
   defp get_message_body_with_length(r, n) when is_integer(n) and n <= byte_size(r) do
     <<body::binary-size(n), x, r2::binary>> = r
     case x do 
       0 -> {body, r2}
-      _ -> {"", r}
+      _ -> {:error, r}
     end
   end
-  defp get_message_body_with_length(r, _n) do
-    {"", r}
+  defp get_message_body_with_length(_r, _n) do
+    :partial
   end
 
   defp get_headers(message) do
@@ -51,16 +64,29 @@ defmodule StompClient.Parser do
       {?\n, ?\n} ->
         {parsed_headers, _} = get_headers_from_raw_src([], headers)
         parsed_headers = Enum.into(parsed_headers, %{})
-        {message_body, remain} =
-          case Map.get(parsed_headers, "content-length", nil) do 
-            nil -> 
-              get_message_body(r)
+        case Map.get(parsed_headers, "content-length") do 
+          nil -> 
+            case get_message_body(r) do
+              :partial ->
+                :partial
 
-            length_str ->
-              get_message_body_with_length(r, length_str)
-          end
+              {message_body, remain} ->
+                {{parsed_headers, message_body}, remain}
+            end
 
-        [{parsed_headers, message_body}, remain]
+          length_str ->
+            case get_message_body_with_length(r, length_str) do
+              :partial ->
+                :partial
+
+              {:error, remain} ->
+                {:error, remain}
+
+              {message_body, remain} ->
+                {{parsed_headers, message_body}, remain}
+            end
+        end
+
 
       {_, _} ->
         get_headers(r, headers <> <<x>>, x)
@@ -85,8 +111,16 @@ defmodule StompClient.Parser do
   defp get_type(<<x, r::binary>>, type) do
     case(x) do
       ?\n ->
-        [{headers, message_body}, remain] = get_headers(r)
-        [type, {headers, message_body}, remain]
+        case get_headers(r) do
+          :partial ->
+            :partial
+
+          {:error, remain} ->
+            {:error, remain}
+
+          {{headers, message_body}, remain} ->
+            {type, {headers, message_body}, remain}
+        end
 
       _ ->
         get_type(r, type <> <<x>>)

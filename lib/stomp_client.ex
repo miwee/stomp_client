@@ -275,9 +275,15 @@ defmodule StompClient do
     :inet.setopts(sock, active: :once)
 
     message2 = buf <> message
-    parsed = Parser.parse_message(message2) 
-    [{:type, type}, {:headers, headers}, {:body, body}, remain] = parsed
-    state = %State{state | recv_buffer: remain}
+    {:ok, parsed} = Parser.parse_message(message2) 
+    %{type: type, headers: headers, body: body, remain: remain} = parsed
+
+    state = 
+      case remain do
+        ""   -> %State{state | recv_buffer: ""} 
+        "\n" -> %State{state | recv_buffer: ""}
+        _    -> %State{state | recv_buffer: remain}
+      end
 
     case type do
       "CONNECTED" ->
@@ -304,6 +310,13 @@ defmodule StompClient do
 
       {:ok, remain} ->
         {:noreply, %State{state | recv_buffer: remain}}    
+
+      {:error, remain} ->
+        Logger.error "parsing error in: #{inspect(message2, binaries: :as_strings)}"
+        {:noreply, %State{state | recv_buffer: remain}}    
+
+      :partial ->
+        {:noreply, %State{state | recv_buffer: message2}}    
     end
   end
 
@@ -348,35 +361,40 @@ defmodule StompClient do
     {:ok, ""}
   end
   defp loop_parse_message(message, %State{callback_handler: callback_handler, disconnect_id: disconnect_id} = state) do
-    parsed = Parser.parse_message(message) 
-    [{:type, type}, {:headers, headers}, {:body, body}, remain] = parsed
-    # Logger.debug inspect([{:type, type}, {:headers, headers}, {:body, body}], binaries: :as_strings)
+    case Parser.parse_message(message) do
+      {:ok, parsed} -> 
+        %{type: type, headers: headers, body: body, remain: remain} = parsed
+        # Logger.debug inspect(parsed, binaries: :as_strings)
 
-    if remain == message do 
-      {:ok, remain}
-    else
-      case type do
-        "MESSAGE" ->
-          data = Map.merge(headers, %{"body" => body})
-          send_callback(callback_handler, {:on_message, data})
-          loop_parse_message(remain, state)
+        if remain == message do 
+          {:ok, remain}
+        else
+          case type do
+            "MESSAGE" ->
+              data = Map.merge(headers, %{"body" => body})
+              send_callback(callback_handler, {:on_message, data})
+              loop_parse_message(remain, state)
 
-        "RECEIPT" ->
-          receipt_id = headers["receipt-id"]
-          if receipt_id == disconnect_id do
-            send_callback(callback_handler, {:on_disconnect, true})
-            :stop
-          else
-            send_callback(callback_handler, {:on_receipt, receipt_id})
-            loop_parse_message(remain, state)
+            "RECEIPT" ->
+              receipt_id = headers["receipt-id"]
+              if receipt_id == disconnect_id do
+                send_callback(callback_handler, {:on_disconnect, true})
+                :stop
+              else
+                send_callback(callback_handler, {:on_receipt, receipt_id})
+                loop_parse_message(remain, state)
+              end
+
+            "ERROR" ->
+              data = Map.merge(headers, %{"body" => body})
+              send_callback(callback_handler, {:on_message_error, data})
+              Logger.error inspect(data, binaries: :as_strings)
+              loop_parse_message(remain, state)
           end
+        end
 
-        "ERROR" ->
-          data = Map.merge(headers, %{"body" => body})
-          send_callback(callback_handler, {:on_message_error, data})
-          Logger.error inspect(data, binaries: :as_strings)
-          loop_parse_message(remain, state)
-      end
+      x ->
+        x
     end
   end
 end
