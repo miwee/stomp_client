@@ -31,7 +31,7 @@ defmodule StompClient.Mixfile do
   defp deps do
     [{:ex_doc, "~> 0.12", only: [:dev, :docs]}]
   end
-  
+
   defp description do
     "STOMP client for Elixir with broker specific addons"
   end
@@ -43,5 +43,5 @@ defmodule StompClient.Mixfile do
      maintainers: ["miwee"],
      licenses: ["Apache 2.0"],
      links: %{"GitHub" => "https://github.com/miwee/stomp_client"}]
-  end  
+  end 
 end

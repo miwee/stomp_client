@@ -3,30 +3,30 @@ defmodule StompClient.RabbitMQ.PersistedWorkQueue do
 
   @default_prefetch_count 1
 
-  def subscribe(pid, topic) do 
+  def subscribe(pid, topic) do
     subscribe(pid, topic, prefetch_count: @default_prefetch_count)
   end
-  def subscribe(pid, topic, prefetch_count: prefetch_count) do 
+  def subscribe(pid, topic, prefetch_count: prefetch_count) do
     topic2 = create_topic(topic)
     sub_id = :erlang.phash2(topic2)
-    opts = [id: sub_id, durable: true, "auto-delete": false, "prefetch-count": prefetch_count, 
+    opts = [id: sub_id, durable: true, "auto-delete": false, "prefetch-count": prefetch_count,
             ack: "client-individual"]
     StompClient.subscribe(pid, topic2, opts)
-  end 
+  end
 
-  def send(pid, topic, payload, opts \\ []) do 
+  def send(pid, topic, payload, opts \\ []) do
     rabbit_opts = [persistent: true]
     Keyword.merge(opts, rabbit_opts, fn _k, _v1, v2 -> v2 end)
     StompClient.send(pid, create_topic(topic), payload, opts)
-  end 
+  end
 
   def ack(pid, %{"ack" => message_id} = _message) do
     StompClient.ack(pid, message_id)
-  end 
+  end
 
   def nack(pid, %{"ack" => message_id} = _message) do
     StompClient.ack(pid, message_id)
-  end 
+  end
 
   # Private functions
   defp create_topic(<<?/, topic::binary>>) do

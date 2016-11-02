@@ -4,7 +4,7 @@ defmodule StompClient do
   with CallbackHandler for messages sent and received.
   This module by design has no broker specific functionality.
   """
-  
+
   use GenServer
   require Logger
 
@@ -16,7 +16,7 @@ defmodule StompClient do
   @default_connection_timeout 10_000
   @default_heartbeat_interval 120_000
   @default_subscription_id    1
-  
+
   defmodule State do
     defstruct callback_handler: nil, sock: nil, recv_buffer: "",
               logged_in: false, disconnect_id: nil
@@ -49,7 +49,7 @@ defmodule StompClient do
     subscribe(pid, destination, id: sub_id, ack: "auto")
   end
   def subscribe(pid, destination, opts) do
-    case Keyword.get(opts, :id, nil) do 
+    case Keyword.get(opts, :id, nil) do
       nil ->
         {:error, :id_field_missing}
 
@@ -275,19 +275,19 @@ defmodule StompClient do
     :inet.setopts(sock, active: :once)
 
     message2 = buf <> message
-    {:ok, parsed} = Parser.parse_message(message2) 
+    {:ok, parsed} = Parser.parse_message(message2)
     %{type: type, headers: headers, body: body, remain: remain} = parsed
 
-    state = 
+    state =
       case remain do
-        ""   -> %State{state | recv_buffer: ""} 
+        ""   -> %State{state | recv_buffer: ""}
         "\n" -> %State{state | recv_buffer: ""}
         _    -> %State{state | recv_buffer: remain}
       end
 
     case type do
       "CONNECTED" ->
-        send_callback(state.callback_handler, {:on_connect, headers}) 
+        send_callback(state.callback_handler, {:on_connect, headers})
         {:noreply, %State{state | logged_in: true}}
 
       "ERROR" ->
@@ -303,20 +303,20 @@ defmodule StompClient do
 
     message2 = buf <> message
     # Logger.debug inspect(message2, binaries: :as_strings)
-    case loop_parse_message(message2, state) do 
+    case loop_parse_message(message2, state) do
       :stop ->
         :gen_tcp.close(sock)
         {:stop, :normal, state}
 
       {:ok, remain} ->
-        {:noreply, %State{state | recv_buffer: remain}}    
+        {:noreply, %State{state | recv_buffer: remain}}
 
       {:error, remain} ->
         Logger.error "parsing error in: #{inspect(message2, binaries: :as_strings)}"
-        {:noreply, %State{state | recv_buffer: remain}}    
+        {:noreply, %State{state | recv_buffer: remain}}
 
       :partial ->
-        {:noreply, %State{state | recv_buffer: message2}}    
+        {:noreply, %State{state | recv_buffer: message2}}
     end
   end
 
@@ -346,11 +346,11 @@ defmodule StompClient do
     end
   end
 
-  defp send_callback(nil, _) do 
+  defp send_callback(nil, _) do
     nil
   end
   defp send_callback(callback_handler, data) do
-    data2 = Tuple.insert_at(data, 0, :stomp_client) 
+    data2 = Tuple.insert_at(data, 0, :stomp_client)
     Kernel.send callback_handler, data2
   end
 
@@ -362,11 +362,11 @@ defmodule StompClient do
   end
   defp loop_parse_message(message, %State{callback_handler: callback_handler, disconnect_id: disconnect_id} = state) do
     case Parser.parse_message(message) do
-      {:ok, parsed} -> 
+      {:ok, parsed} ->
         %{type: type, headers: headers, body: body, remain: remain} = parsed
         # Logger.debug inspect(parsed, binaries: :as_strings)
 
-        if remain == message do 
+        if remain == message do
           {:ok, remain}
         else
           case type do
