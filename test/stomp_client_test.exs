@@ -23,7 +23,7 @@ defmodule StompClientTest do
     StompClient.send(pid, "test1", "test data")
     assert_receive {:stomp_client, :on_message, %{"body" => "test data"}}
     disconnect(pid)
-  end  
+  end
 
   test "stomp_on_subscribe_error callback on subscribing again for same {topic, id} pair" do
     pid = connect()
@@ -33,5 +33,5 @@ defmodule StompClientTest do
     StompClient.subscribe(pid, "test1", id: 1)
     assert_receive {:stomp_client, :on_message_error, %{"message" => "Duplicated subscription identifier"}}
     assert_receive {:stomp_client, :on_disconnect, _}
-  end    
+  end
 end

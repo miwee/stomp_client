@@ -3,29 +3,29 @@ defmodule StompClient.RabbitMQ.PersistedPubSub do
 
   @default_prefetch_count 10
 
-  def subscribe(pid, topic) do 
+  def subscribe(pid, topic) do
     subscribe(pid, topic, prefetch_count: @default_prefetch_count)
   end
-  def subscribe(pid, topic, prefetch_count: prefetch_count) do 
+  def subscribe(pid, topic, prefetch_count: prefetch_count) do
     topic2 = create_topic(topic)
     sub_id = :erlang.phash2(topic2, 65_535)
-    opts = [id: sub_id, durable: true, "auto-delete": false, "prefetch-count": prefetch_count, 
+    opts = [id: sub_id, durable: true, "auto-delete": false, "prefetch-count": prefetch_count,
             ack: "client-individual"]
     StompClient.subscribe(pid, topic2, opts)
-  end 
+  end
 
-  def send(pid, topic, payload) do 
+  def send(pid, topic, payload) do
     opts = [persistent: true]
     StompClient.send(pid, create_topic(topic), payload, opts)
-  end 
+  end
 
   def ack(pid, %{"ack" => message_id} = _message) do
     StompClient.ack(pid, message_id)
-  end 
+  end
 
   def nack(pid, %{"ack" => message_id} = _message) do
     StompClient.ack(pid, message_id)
-  end 
+  end
 
   defp create_topic(<<?/, topic::binary>>) do
     "/topic/" <> topic

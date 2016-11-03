@@ -10,11 +10,11 @@ defmodule StompClientTest.Config do
     port
   end
 
-  def login do 
+  def login do
     "guest"
   end
 
-  def passcode do 
+  def passcode do
     "guest"
   end
 
@@ -22,7 +22,7 @@ defmodule StompClientTest.Config do
     10_000
   end
 
-  def connect_opts do 
+  def connect_opts do
     [host: host, port: port, login: login, passcode: passcode]
   end
 end
