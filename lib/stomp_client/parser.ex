@@ -59,6 +59,9 @@ defmodule StompClient.Parser do
   defp get_headers(message, headers) do
     get_headers(message, headers, -1)
   end
+  defp get_headers("", _, _) do
+    :partial
+  end  
   defp get_headers(<<x, r::binary>>, headers, last_char) do
     case({x, last_char}) do
       {?\n, ?\n} ->
