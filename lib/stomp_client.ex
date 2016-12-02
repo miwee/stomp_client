@@ -32,9 +32,9 @@ defmodule StompClient do
   def connect(connect_opts) do
     connect(connect_opts, callback_handler: nil)
   end
-  def connect(connect_opts, callback_handler: callback_handler) do
+  def connect(connect_opts, [callback_handler: callback_handler], timeout \\ 5_000) do
     {:ok, pid} = StompClient.start_link(callback_handler)
-    GenServer.call(pid, {:connect, connect_opts})
+    GenServer.call(pid, {:connect, connect_opts}, timeout)
     pid
   end
 
