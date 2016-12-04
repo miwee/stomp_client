@@ -32,9 +32,10 @@ defmodule StompClient do
   def connect(connect_opts) do
     connect(connect_opts, callback_handler: nil)
   end
-  def connect(connect_opts, callback_handler: callback_handler) do
+  def connect(connect_opts, [callback_handler: callback_handler]) do
     {:ok, pid} = StompClient.start_link(callback_handler)
-    GenServer.call(pid, {:connect, connect_opts})
+    timeout = Keyword.get(connect_opts, :timeout, @default_connection_timeout)    
+    GenServer.call(pid, {:connect, connect_opts}, timeout)
     pid
   end
 
