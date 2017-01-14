@@ -18,4 +18,9 @@ defmodule StompClient.ParserTest do
     assert parsed == :partial
   end
 
+  test "parse partial message3" do
+    message = "MESSA"
+    parsed = Parser.parse_message(message)
+    assert parsed == :partial
+  end
 end

@@ -11,6 +11,9 @@ defmodule StompClient.Parser do
 
       {type, {headers, message_body}, remain} ->
         {:ok, %{type: type, headers: headers, body: message_body, remain: remain}}
+
+      remain ->
+        :partial
     end
   end
 
