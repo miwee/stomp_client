@@ -34,7 +34,7 @@ defmodule StompClient do
   end
   def connect(connect_opts, [callback_handler: callback_handler]) do
     {:ok, pid} = StompClient.start_link(callback_handler)
-    timeout = Keyword.get(connect_opts, :timeout, @default_connection_timeout)    
+    timeout = Keyword.get(connect_opts, :timeout, @default_connection_timeout)
     GenServer.call(pid, {:connect, connect_opts}, timeout)
     pid
   end
@@ -316,8 +316,8 @@ defmodule StompClient do
         Logger.error "parsing error in: #{inspect(message2, binaries: :as_strings)}"
         {:noreply, %State{state | recv_buffer: remain}}
 
-      :partial ->
-        {:noreply, %State{state | recv_buffer: message2}}
+      {:partial, remain} ->
+        {:noreply, %State{state | recv_buffer: remain}}
     end
   end
 
@@ -394,8 +394,8 @@ defmodule StompClient do
           end
         end
 
-      x ->
-        x
+      :partial ->
+        {:partial, message}
     end
   end
 end
