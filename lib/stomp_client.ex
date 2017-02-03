@@ -396,6 +396,9 @@ defmodule StompClient do
 
       :partial ->
         {:partial, message}
+
+      {:error, remain} ->
+        {:error, remain}
     end
   end
 end
