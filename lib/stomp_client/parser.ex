@@ -12,7 +12,7 @@ defmodule StompClient.Parser do
       {type, {headers, message_body}, remain} ->
         {:ok, %{type: type, headers: headers, body: message_body, remain: remain}}
 
-      remain ->
+      _remain ->
         :partial
     end
   end
@@ -64,7 +64,7 @@ defmodule StompClient.Parser do
   end
   defp get_headers("", _, _) do
     :partial
-  end  
+  end
   defp get_headers(<<x, r::binary>>, headers, last_char) do
     case({x, last_char}) do
       {?\n, ?\n} ->
