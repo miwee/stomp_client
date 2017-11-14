@@ -26,4 +26,3 @@ defmodule StompClientTest.Config do
     [host: host, port: port, login: login, passcode: passcode]
   end
 end
-

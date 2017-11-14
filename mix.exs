@@ -2,14 +2,16 @@ defmodule StompClient.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :stomp_client,
-     version: "0.1.0",
-     elixir: "~> 1.3",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     description: description(),
-     package: package(),
-     deps: deps()]
+    [
+      app: :stomp_client,
+      version: "0.1.1",
+      elixir: "~> 1.3",
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      description: description(),
+      package: package(),
+      deps: deps()
+    ]
   end
 
   # Configuration for the OTP application
@@ -37,11 +39,13 @@ defmodule StompClient.Mixfile do
   end
 
   defp package do
-    [# These are the default files included in the package
-     name: :stomp_client,
-     files: ["lib", "mix.exs", "README*", "LICENSE*"],
-     maintainers: ["miwee"],
-     licenses: ["Apache 2.0"],
-     links: %{"GitHub" => "https://github.com/miwee/stomp_client"}]
+    # These are the default files included in the package
+    [
+      name: :stomp_client,
+      files: ["lib", "mix.exs", "README*", "LICENSE*"],
+      maintainers: ["miwee"],
+      licenses: ["Apache 2.0"],
+      links: %{"GitHub" => "https://github.com/miwee/stomp_client"}
+    ]
   end
 end

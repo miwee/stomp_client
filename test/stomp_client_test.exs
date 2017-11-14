@@ -31,7 +31,11 @@ defmodule StompClientTest do
     StompClient.subscribe(pid, "test1", id: 1, receipt: 12)
     assert_receive {:stomp_client, :on_receipt, "12"}
     StompClient.subscribe(pid, "test1", id: 1)
-    assert_receive {:stomp_client, :on_message_error, %{"message" => "Duplicated subscription identifier"}}
+
+    assert_receive {:stomp_client, :on_message_error, %{
+                     "message" => "Duplicated subscription identifier"
+                   }}
+
     assert_receive {:stomp_client, :on_disconnect, _}
   end
 end
